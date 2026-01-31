@@ -177,7 +177,7 @@ mod test {
     fn valid_status_codes_round_tripped(#[case] code: u8) -> Result<()> {
         let code = StatusCode::try_from(code)?;
         let status = Status::try_from(code)?;
-        let recoded = StatusCode::try_from(&status)?;
+        let recoded = StatusCode::from(&status);
 
         assert_eq!(code, recoded);
         Ok(())
