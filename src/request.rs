@@ -7,6 +7,12 @@ use crate::status::{PermanentFailure, Status};
 #[derive(Debug, PartialEq)]
 pub struct Request(Url);
 
+impl Request {
+    pub fn url(&self) -> &Url {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, thiserror::Error, PartialEq)]
 pub enum RequestError {
     #[error("The input exceeded 1024 bytes.")]

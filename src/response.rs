@@ -24,6 +24,14 @@ pub struct SuccessResponse {
     pub body: Bytes,
 }
 
+pub struct FileResponse {
+    pub status: Success,
+    pub mime: &'static str,
+    pub file: std::fs::File,
+}
+
+// impl From<FileResponse>
+
 // TODO: do we really want a trait?
 // pub struct StreamingResponse<T: Read> {
 //     body: T
@@ -32,6 +40,7 @@ pub struct SuccessResponse {
 pub enum Response {
     Err(ErrResponse),
     Fixed(SuccessResponse),
+    Disk(FileResponse),
     // Streaming(Box<dyn StreamingResponse>)
 }
 
@@ -50,6 +59,14 @@ impl Response {
             Self::Fixed(SuccessResponse { status, mime, body }) => {
                 write!(writer, "{} {}\r\n", Status::Success(status), mime)?;
                 writer.write_all(&body)?;
+            }
+            Self::Disk(FileResponse {
+                status,
+                mime,
+                mut file,
+            }) => {
+                write!(writer, "{} {}\r\n", Status::Success(status), mime)?;
+                std::io::copy(&mut file, &mut writer)?;
             }
         }
         Ok(())

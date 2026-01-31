@@ -16,3 +16,4 @@ webpki-roots = "1.0.5"
 
 [dev-dependencies]
 rstest = "0.26.1"
+tempfile = "3.24.0"
