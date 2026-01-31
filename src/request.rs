@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use url::Url;
 
+use crate::status::{PermanentFailure, Status};
+
 #[derive(Debug, PartialEq)]
 pub struct Request(Url);
 
@@ -21,6 +23,12 @@ pub enum RequestError {
     URIContainsUserInfo,
     #[error("Gemini URIs must be absolute.")]
     RelativeURI,
+}
+
+impl From<&RequestError> for Status {
+    fn from(_value: &RequestError) -> Self {
+        Status::PermanentFailure(PermanentFailure::BadRequest)
+    }
 }
 
 impl FromStr for Request {

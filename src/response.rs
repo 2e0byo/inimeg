@@ -9,6 +9,15 @@ pub struct ErrResponse {
     pub msg: Option<Bytes>,
 }
 
+impl ErrResponse {
+    pub fn from_status(status: Status) -> Self {
+        Self {
+            status,
+            msg: Some(format!("{status:?}").into()),
+        }
+    }
+}
+
 pub struct SuccessResponse {
     pub status: Success,
     pub mime: String,

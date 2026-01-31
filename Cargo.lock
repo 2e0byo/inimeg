@@ -415,10 +415,13 @@ dependencies = [
  "anyhow",
  "bytes",
  "clap",
+ "log",
  "rstest",
  "rustls",
+ "rustls-util",
  "thiserror",
  "url",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -645,6 +648,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls-util"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "283661711499053f13d6a47063daf7037765d3cbc63c12a124f3510f7e6e6b83"
+
+[[package]]
 name = "rustls-webpki"
 version = "0.103.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -858,6 +867,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9517f9239f02c069db75e65f174b3da828fe5f5b945c4dd26bd25d89c03ebcf5"
 dependencies = [
  "wit-bindgen",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12bed680863276c63889429bfd6cab3b99943659923822de1c8a39c49e4d722c"
+dependencies = [
+ "rustls-pki-types",
 ]
 
 [[package]]
