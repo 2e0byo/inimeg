@@ -1,5 +1,6 @@
 use crate::{
     cli,
+    handler::Handler,
     request::{Request, RequestError},
     response::{ErrResponse, Response},
     status::*,
@@ -30,10 +31,6 @@ pub enum Error {
 }
 
 type Result<T> = std::result::Result<T, Error>;
-
-pub trait Handler {
-    fn handle_request(&mut self, request: &Request) -> Option<Response>;
-}
 
 pub struct Server {
     config: Arc<ServerConfig>,

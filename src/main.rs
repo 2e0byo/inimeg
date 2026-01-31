@@ -3,6 +3,7 @@ use clap::Parser;
 use cli::Cli;
 
 mod cli;
+mod handler;
 #[allow(dead_code)]
 mod request;
 #[allow(dead_code)]
