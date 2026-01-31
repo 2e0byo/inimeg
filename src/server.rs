@@ -1,7 +1,7 @@
 use crate::{
     cli,
     request::{Request, RequestError},
-    response::{ErrResponse, Response, SuccessResponse},
+    response::{ErrResponse, Response},
     status::*,
 };
 use rustls::{
@@ -31,9 +31,14 @@ pub enum Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
+pub trait Handler {
+    fn handle_request(&mut self, request: &Request) -> Option<Response>;
+}
+
 pub struct Server {
     config: Arc<ServerConfig>,
     listener: TcpListener,
+    handlers: Vec<Box<dyn Handler>>,
 }
 
 fn parse_raw_request<'a>(stream: &mut TlsStream<'a>) -> Result<String> {
@@ -57,20 +62,26 @@ impl Server {
         Ok(Self {
             config: config.into(),
             listener,
+            handlers: vec![],
         })
     }
 
-    fn handle_request(&self, request: &str) -> Result<Response> {
+    fn handle_request(&mut self, request: &str) -> Result<Response> {
         let request = Request::from_str(request)?;
-        dbg!(&request);
-        Ok(Response::Fixed(SuccessResponse {
-            status: Success::Generic,
-            mime: "text/plain".into(),
-            body: "Hello world".into(),
-        }))
+        let resp = self
+            .handlers
+            .iter_mut()
+            .filter_map(|handler| handler.handle_request(&request))
+            .next()
+            .unwrap_or_else(|| {
+                Response::Err(ErrResponse::from_status(Status::PermanentFailure(
+                    PermanentFailure::NotFound,
+                )))
+            });
+        Ok(resp)
     }
 
-    fn handle<'a>(&self, mut stream: Stream<'a, ServerConnection, TcpStream>) {
+    fn handle<'a>(&mut self, mut stream: Stream<'a, ServerConnection, TcpStream>) {
         let resp: Response = parse_raw_request(&mut stream)
             .and_then(|raw| self.handle_request(raw.as_ref()))
             .or_else(|e| -> std::result::Result<Response, ()> {
@@ -91,7 +102,7 @@ impl Server {
             .inspect_err(|e| warn!("Failed to send response: {e:?}"));
     }
 
-    pub fn run(self) -> anyhow::Result<()> {
+    pub fn run(&mut self) -> anyhow::Result<()> {
         loop {
             let (mut tcp_stream, _) = self.listener.accept()?;
             let mut conn = ServerConnection::new(self.config.clone())?;
