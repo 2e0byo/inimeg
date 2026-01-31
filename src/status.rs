@@ -117,8 +117,8 @@ impl TryFrom<StatusCode> for Status {
 }
 
 #[rustfmt::skip]
-impl From<Status> for StatusCode {
-    fn from(value: Status) -> Self {
+impl From<&Status> for StatusCode {
+    fn from(value: &Status) -> Self {
         match value {
             Status::InputExpected(InputExpected::Generic)                    => StatusCode(10),
             Status::InputExpected(InputExpected::Whisper)                    => StatusCode(11),
@@ -139,6 +139,12 @@ impl From<Status> for StatusCode {
             Status::CertificateRequired(CertificateRequired::NotAuthorised)  => StatusCode(61),
             Status::CertificateRequired(CertificateRequired::Invalid)        => StatusCode(62),
         }
+    }
+}
+
+impl std::fmt::Display for Status {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", StatusCode::from(self).0)
     }
 }
 
@@ -171,7 +177,7 @@ mod test {
     fn valid_status_codes_round_tripped(#[case] code: u8) -> Result<()> {
         let code = StatusCode::try_from(code)?;
         let status = Status::try_from(code)?;
-        let recoded = StatusCode::try_from(status)?;
+        let recoded = StatusCode::try_from(&status)?;
 
         assert_eq!(code, recoded);
         Ok(())
