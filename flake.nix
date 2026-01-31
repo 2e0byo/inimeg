@@ -30,7 +30,7 @@
           system,
           ...
         }: let
-          makeRuntimeDeps = pkgs: [];
+          makeRuntimeDeps = pkgs: [pkgs.openssl];
           makeBuildDeps = pkgs: [];
           makeDevDeps = pkgs: [
           pkgs.gdb
