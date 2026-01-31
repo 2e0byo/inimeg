@@ -15,7 +15,11 @@ fn main() -> Result<()> {
     let cli = cli::Cli::parse();
     match cli {
         Cli::Serve(config) => {
-            let mut server = server::Server::try_from(config)?;
+            let mut server = server::Server::try_from(&config)?;
+            if let Some(path) = config.static_dir {
+                let handler = handler::StaticHandler::new(path.canonicalize()?)?;
+                server.add_handler(Box::new(handler));
+            }
             server.run()?;
         }
     }

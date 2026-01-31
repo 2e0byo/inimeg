@@ -63,6 +63,10 @@ impl Server {
         })
     }
 
+    pub fn add_handler(&mut self, handler: Box<dyn Handler>) {
+        self.handlers.push(handler);
+    }
+
     fn handle_request(&mut self, request: &str) -> Result<Response> {
         let request = Request::from_str(request)?;
         let resp = self
@@ -109,12 +113,12 @@ impl Server {
     }
 }
 
-impl TryFrom<cli::Serve> for Server {
+impl TryFrom<&cli::Serve> for Server {
     type Error = anyhow::Error;
-    fn try_from(value: cli::Serve) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &cli::Serve) -> std::result::Result<Self, Self::Error> {
         Self::new(
-            CertificateDer::from_pem_file(value.certificate).expect("certificate"),
-            PrivateKeyDer::from_pem_file(value.private_key).expect("certificate"),
+            CertificateDer::from_pem_file(&value.certificate).expect("certificate"),
+            PrivateKeyDer::from_pem_file(&value.private_key).expect("certificate"),
             value.port,
         )
     }

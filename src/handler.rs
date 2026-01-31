@@ -27,7 +27,7 @@ pub enum StaticHandlerError {
 }
 
 impl StaticHandler {
-    fn new(path: impl Into<PathBuf>) -> Result<Self, StaticHandlerError> {
+    pub fn new(path: impl Into<PathBuf>) -> Result<Self, StaticHandlerError> {
         let path: PathBuf = path.into();
         if !path.is_absolute() {
             Err(StaticHandlerError::RelativePath)
@@ -51,13 +51,9 @@ fn mime_type(path: &Path) -> &'static str {
 impl Handler for StaticHandler {
     fn handle_request(&mut self, request: &Request) -> Option<Response> {
         let url = request.url();
-        dbg!(&url);
         (url.query().is_none())
             .then_some(url.path().get(1..).unwrap_or_default())
             .map(|p| self.path.join(p))
-            .inspect(|p| {
-                dbg!(&p, &self.path);
-            })
             .filter(|p| p.starts_with(&self.path))
             .map(|p| {
                 if p.is_dir() {
@@ -75,7 +71,6 @@ impl Handler for StaticHandler {
             })
             .map(|p| (mime_type(&p), p))
             .map(|(mime, p)| {
-                dbg!(&mime, &p);
                 File::open(p)
                     .map(|file| {
                         Response::Disk(FileResponse {
