@@ -1,5 +1,6 @@
 use std::{
     fs::File,
+    ops::Deref,
     path::{Path, PathBuf},
 };
 
@@ -14,8 +15,31 @@ pub trait Handler {
 }
 
 #[derive(Debug)]
+struct Prefix(String);
+
+impl From<String> for Prefix {
+    fn from(value: String) -> Self {
+        if !value.starts_with('/') {
+            Self(format!("/{value}"))
+        } else {
+            Self(value)
+        }
+    }
+}
+
+impl Deref for Prefix {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Debug)]
 pub struct StaticHandler {
+    /// The directory containing the content
     path: PathBuf,
+    /// The prefix required in the url for this handler to match.
+    prefix: Prefix,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -27,14 +51,20 @@ pub enum StaticHandlerError {
 }
 
 impl StaticHandler {
-    pub fn new(path: impl Into<PathBuf>) -> Result<Self, StaticHandlerError> {
+    pub fn new(
+        path: impl Into<PathBuf>,
+        prefix: impl Into<String>,
+    ) -> Result<Self, StaticHandlerError> {
         let path: PathBuf = path.into();
         if !path.is_absolute() {
             Err(StaticHandlerError::RelativePath)
         } else if !path.exists() {
             Err(StaticHandlerError::MissingPath)
         } else {
-            Ok(Self { path })
+            Ok(Self {
+                path,
+                prefix: Prefix::from(prefix.into()),
+            })
         }
     }
 }
@@ -52,7 +82,9 @@ impl Handler for StaticHandler {
     fn handle_request(&mut self, request: &Request) -> Option<Response> {
         let url = request.url();
         (url.query().is_none())
-            .then_some(url.path().get(1..).unwrap_or_default())
+            .then_some(url.path())
+            .filter(|p| p.starts_with(&*self.prefix))
+            .map(|p| p.get(self.prefix.len() + 1..).unwrap_or_default())
             .map(|p| self.path.join(p))
             .filter(|p| p.starts_with(&self.path))
             .map(|p| {
@@ -99,12 +131,12 @@ mod test_static_handler {
     #[test]
     fn can_only_be_constructed_with_an_extant_absolute_path() {
         assert!(matches!(
-            StaticHandler::new("../foo"),
+            StaticHandler::new("../foo", ""),
             Err(StaticHandlerError::RelativePath)
         ));
         assert!(!PathBuf::from("/foo/bar/baz/blah").exists()); // sanity
         assert!(matches!(
-            StaticHandler::new("/foo/bar/baz/blah"),
+            StaticHandler::new("/foo/bar/baz/blah", ""),
             Err(StaticHandlerError::MissingPath)
         ));
     }
@@ -115,9 +147,9 @@ mod test_static_handler {
         let path = dir.path().join("foo.gemini");
         std::fs::write(&path, "hello world")?;
 
-        let mut handler = StaticHandler::new(dir.path())?;
+        let mut handler = StaticHandler::new(dir.path(), "static")?;
 
-        let req: Request = "gemini://example.com/foo.gemini\r\n".parse()?;
+        let req: Request = "gemini://example.com/static/foo.gemini\r\n".parse()?;
         let resp = handler.handle_request(&req).expect("handled");
 
         let mut buffer = Vec::new();
@@ -136,9 +168,9 @@ mod test_static_handler {
         let path = dir.path().join(path);
         std::fs::write(&path, "hello world")?;
 
-        let mut handler = StaticHandler::new(dir.path())?;
+        let mut handler = StaticHandler::new(dir.path(), "static")?;
 
-        let req: Request = "gemini://example.com/\r\n".parse()?;
+        let req: Request = "gemini://example.com/static/\r\n".parse()?;
         let resp = handler.handle_request(&req).expect("handled");
 
         let mut buffer = Vec::new();
@@ -152,15 +184,28 @@ mod test_static_handler {
     #[test]
     fn rejects_requests_from_outside_its_content_dir() -> Result<()> {
         let dir = TempDir::new()?;
-        let mut handler = StaticHandler::new(dir.path())?;
+        let mut handler = StaticHandler::new(dir.path(), "static")?;
 
-        let req: Request = "gemini://example.co.uk/../../passwd\r\n".parse()?;
+        // let req: Request = "gemini://example.co.uk/static/../../passwd\r\n".parse()?;
+        let req: Request =
+            "gemini://example.co.uk/static/..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd\r\n".parse()?;
         let resp = handler.handle_request(&req).expect("handled");
 
         let mut buffer = Vec::new();
         resp.send(&mut buffer)?;
         let buffer = String::try_from(buffer)?;
         assert_eq!(buffer, "51 PermanentFailure(NotFound)\r\n");
+        Ok(())
+    }
+
+    #[test]
+    fn ignores_requests_not_starting_with_its_prefix() -> Result<()> {
+        let dir = TempDir::new()?;
+        let mut handler = StaticHandler::new(dir.path(), "static")?;
+
+        let req: Request = "gemini://example.co.uk/dynamic/../../passwd\r\n".parse()?;
+
+        assert!(handler.handle_request(&req).is_none());
         Ok(())
     }
 }

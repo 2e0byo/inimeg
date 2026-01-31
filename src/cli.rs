@@ -12,8 +12,14 @@ pub struct Serve {
     /// The port the server should listen on.
     #[arg(long, short, default_value_t = 1965)]
     pub port: usize,
+    /// Static dirs to serve.
+    ///
+    /// The name of every dir will be used to filter incoming requests. For
+    /// instance a dir at `foo/bar/tinylog` will handle incoming requests for
+    /// `tinylog/` An request with a query will be ignored by the static
+    /// handler, permitting the addition of e.g. a search handler on top.
     #[arg(long)]
-    pub static_dir: Option<PathBuf>,
+    pub static_dirs: Option<Vec<PathBuf>>,
 }
 
 /// Inimeg, a Gemini server built from the ground up.
