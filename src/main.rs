@@ -25,6 +25,10 @@ fn main() -> Result<()> {
                     server.add_handler(Box::new(handler));
                 }
             }
+            if let Some(path) = config.root_dir {
+                let handler = handler::StaticHandler::new(path.canonicalize()?, "/")?;
+                server.add_handler(Box::new(handler));
+            }
             server.run()?;
         }
     }

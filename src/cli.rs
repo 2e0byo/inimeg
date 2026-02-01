@@ -16,10 +16,16 @@ pub struct Serve {
     ///
     /// The name of every dir will be used to filter incoming requests. For
     /// instance a dir at `foo/bar/tinylog` will handle incoming requests for
-    /// `tinylog/` An request with a query will be ignored by the static
+    /// `tinylog/` Any request with a query will be ignored by the static
     /// handler, permitting the addition of e.g. a search handler on top.
     #[arg(long)]
     pub static_dirs: Option<Vec<PathBuf>>,
+
+    /// Static content to serve at the root. If you do this, the server is
+    /// basically just a static file server, as all requests not including a
+    /// query will be routed to this static dir.  (This may well be desirable.)
+    #[arg(long)]
+    pub root_dir: Option<PathBuf>,
 }
 
 /// Inimeg, a Gemini server built from the ground up.
