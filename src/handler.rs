@@ -20,12 +20,14 @@ pub trait Handler {
 struct Prefix(String);
 
 impl From<String> for Prefix {
-    fn from(value: String) -> Self {
+    fn from(mut value: String) -> Self {
         if !value.starts_with('/') {
-            Self(format!("/{value}"))
-        } else {
-            Self(value)
+            value = format!("/{value}");
         }
+        if !value.ends_with('/') {
+            value.push('/');
+        }
+        Self(value)
     }
 }
 
@@ -92,7 +94,7 @@ impl Handler for StaticHandler {
                 )
             })
             .filter(|p| p.starts_with(&*self.prefix))
-            .map(|p| p.get(self.prefix.len() + 1..).unwrap_or_default())
+            .map(|p| p.get(self.prefix.len()..).unwrap_or_default())
             .map(|p| self.path.join(p))
             .filter(|p| p.starts_with(&self.path))
             .map(|p| {
@@ -156,15 +158,23 @@ mod test_static_handler {
         ));
     }
 
-    #[test]
-    fn serves_content_from_its_content_dir() -> Result<()> {
+    #[rstest]
+    #[case::simple_noslash("foo.gemini", "static")]
+    #[case::nested_noslash("posts/foo.gemini", "static")]
+    #[case::simple_noslash("foo.gemini", "static/")]
+    #[case::nested_noslash("posts/foo.gemini", "static/")]
+    fn serves_content_from_its_content_dir(
+        #[case] target: &str,
+        #[case] prefix: &str,
+    ) -> Result<()> {
         let dir = TempDir::new()?;
-        let path = dir.path().join("foo.gemini");
+        let path = dir.path().join(target);
+        let _ = path.parent().map(std::fs::create_dir_all);
         std::fs::write(&path, "hello world")?;
 
-        let mut handler = StaticHandler::new(dir.path(), "static")?;
+        let mut handler = StaticHandler::new(dir.path(), prefix)?;
 
-        let req: Request = "gemini://example.com/static/foo.gemini\r\n".parse()?;
+        let req: Request = format!("gemini://example.com/static/{target}\r\n").parse()?;
         let resp = handler.handle_request(&req).expect("handled");
 
         let mut buffer = Vec::new();
