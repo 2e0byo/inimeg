@@ -4,6 +4,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use log::debug;
+
 use crate::{
     request::Request,
     response::{ErrResponse, FileResponse, Response},
@@ -83,6 +85,12 @@ impl Handler for StaticHandler {
         let url = request.url();
         (url.query().is_none())
             .then_some(url.path())
+            .inspect(|path| {
+                debug!(
+                    "Static handler for '{:?}' is considering request for '{}'",
+                    self.prefix, path
+                )
+            })
             .filter(|p| p.starts_with(&*self.prefix))
             .map(|p| p.get(self.prefix.len() + 1..).unwrap_or_default())
             .map(|p| self.path.join(p))
@@ -102,6 +110,13 @@ impl Handler for StaticHandler {
                 }
             })
             .map(|p| (mime_type(&p), p))
+            .inspect(|(mime, p)| {
+                     debug!(
+                    "Static handler for '{:?}' is looking for '{p:?}' of mime type '{mime}' on disk",
+                    self.prefix
+                );
+            }
+            )
             .map(|(mime, p)| {
                 File::open(p)
                     .map(|file| {
