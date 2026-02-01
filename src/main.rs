@@ -13,6 +13,7 @@ mod status;
 
 fn main() -> Result<()> {
     let cli = cli::Cli::parse();
+    pretty_env_logger::init();
     match cli {
         Cli::Serve(config) => {
             let mut server = server::Server::try_from(&config)?;
