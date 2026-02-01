@@ -33,10 +33,10 @@
           makeRuntimeDeps = pkgs: [pkgs.openssl];
           makeBuildDeps = pkgs: [];
           makeDevDeps = pkgs: [
-          pkgs.gdb
-          pkgs.pre-commit
-          pkgs.cargo-nextest
-          pkgs.rust-analyzer
+            pkgs.gdb
+            pkgs.pre-commit
+            pkgs.cargo-nextest
+            pkgs.rust-analyzer
           ];
 
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
@@ -47,8 +47,8 @@
               env = {
                 RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
               };
-              buildInputs = makeRuntimeDeps pkgs
-                ;
+              buildInputs =
+                makeRuntimeDeps pkgs;
               nativeBuildInputs = (makeBuildDeps pkgs) ++ (makeDevDeps pkgs) ++ [rustc];
               shellHook = ''
                 pre-commit install
@@ -68,7 +68,6 @@
             pkgs.callPackage ./. {
               inherit makeBuildDeps makeRuntimeDeps cargoToml features rustPlatform;
             };
-
         in {
           _module.args.pkgs = import nixpkgs {inherit system overlays;};
 
@@ -81,7 +80,8 @@
           devShells.default = self'.devShells.pinned;
 
           packages = {
-            inimeg_amd64_linux_static = buildPackage { pkgs = pkgs.pkgsStatic; };
+            inimeg_amd64_linux_static = buildPackage {pkgs = pkgs.pkgsStatic;};
+            inimeg_cross_amd64_freebsd_static = buildPackage {pkgs = pkgs.pkgsCross.x86_64-freebsd.pkgsStatic;};
           };
         };
       }
