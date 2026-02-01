@@ -40,7 +40,7 @@
           ];
 
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-          msrv = cargoToml.package.rust-version;
+          # msrv = cargoToml.package.rust-version;
 
           mkDevShell = rustc:
             pkgs.mkShell {
@@ -55,6 +55,19 @@
               '';
             };
           overlays = [(import rust-overlay)];
+          buildPackage = {
+            pkgs,
+            features ? "",
+          }: let
+            rust-bin = inputs.rust-overlay.lib.mkRustBin {} pkgs.buildPackages;
+            rustPlatform = pkgs.makeRustPlatform {
+              cargo = rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+              rustc = rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+            };
+          in
+            pkgs.callPackage ./. {
+              inherit makeBuildDeps makeRuntimeDeps cargoToml features rustPlatform;
+            };
 
         in {
           _module.args.pkgs = import nixpkgs {inherit system overlays;};
@@ -62,10 +75,14 @@
           devShells.nightly =
             mkDevShell (pkgs.rust-bin.selectLatestNightlyWith
               (toolchain: toolchain.default));
-          devShells.stable = mkDevShell pkgs.rust-bin.stable.latest.default;
-          devShells.msrv = mkDevShell pkgs.rust-bin.stable.${msrv}.default;
+          # devShells.stable = mkDevShell pkgs.rust-bin.stable.latest.default;
+          # devShells.msrv = mkDevShell pkgs.rust-bin.stable.${msrv}.default;
           devShells.pinned = mkDevShell (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml);
           devShells.default = self'.devShells.pinned;
+
+          packages = {
+            inimeg_amd64_linux_static = buildPackage { pkgs = pkgs.pkgsStatic; };
+          };
         };
       }
     );
